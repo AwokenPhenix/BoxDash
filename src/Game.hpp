@@ -1,0 +1,28 @@
+#pragma once
+#include <SFML/Graphics.hpp>
+#include <vector>
+
+#include "Player.hpp"
+#include "Enemy.hpp"
+#include "Level.hpp"
+
+class Game {
+public:
+    Game();
+    void run();
+
+private:
+    sf::RenderWindow window;
+    sf::View view;
+
+    Player player;
+    Level level;
+    std::vector<Enemy> enemies;
+
+    sf::RectangleShape attackBox;
+    float hitstopTimer = 0.f;
+
+    void processInput(float dt);
+    void update(float dt);
+    void render();
+};
