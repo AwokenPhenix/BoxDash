@@ -24,4 +24,4 @@ constexpr float PLAYER_SIZE = 32.f;
 constexpr float FALL_DEATH_Y = 900.f;
 const sf::Vector2f SPAWN_POINT{ 100.f, GROUND_Y - PLAYER_SIZE };
 constexpr float SLAM_SPEED = 2200.f;
-constexpr float HITSTOP_TIME = 0.06f;
+constexpr float HITSTOP_TIME = 0.12f;

@@ -21,6 +21,9 @@ private:
 
     sf::RectangleShape attackBox;
     float hitstopTimer = 0.f;
+    bool attackButtonHeld = false;
+    bool editorMode = false;
+    const float GRID_SIZE = 32.f;
 
     void processInput(float dt);
     void update(float dt);

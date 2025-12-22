@@ -17,7 +17,8 @@ Game::Game()
     player.body.setFillColor(sf::Color(0, 255, 180));
     player.respawn();
 
-    level.build();
+    level.loadFromFile("level1.txt");
+
 
     // enemies
     for (int i = 0; i < 4; ++i) {
@@ -53,7 +54,12 @@ void Game::processInput(float /*dt*/) {
         if (event->is<sf::Event::Closed>()) {
             window.close();
         }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Tab)) {
+            editorMode = !editorMode;
+        }
+
     }
+
 }
 
 
@@ -61,6 +67,43 @@ void Game::processInput(float /*dt*/) {
 // Update (TEMP: does nothing yet)
 // ------------------------------------------------
 void Game::update(float dt) {
+    if (editorMode) {
+        // Disable gameplay
+        player.vel = { 0.f, 0.f };
+
+        // Mouse world position
+        sf::Vector2i mousePixel = sf::Mouse::getPosition(window);
+        sf::Vector2f mouseWorld = window.mapPixelToCoords(mousePixel);
+
+        // Snap to grid
+        float gx = std::floor(mouseWorld.x / GRID_SIZE) * GRID_SIZE;
+        float gy = std::floor(mouseWorld.y / GRID_SIZE) * GRID_SIZE;
+
+        // Left click ? add platform
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
+            level.addPlatform(gx, gy, GRID_SIZE * 4.f, GRID_SIZE);
+        }
+
+        // Right click ? delete platform
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Right)) {
+            for (auto it = level.platforms.begin(); it != level.platforms.end(); ++it) {
+                if (it->getGlobalBounds().contains(mouseWorld)) {
+                    level.platforms.erase(it);
+                    break;
+                }
+            }
+        }
+
+        // Save
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) {
+            level.saveToFile("level1.txt");
+        }
+
+        return; // skip normal gameplay update
+    }
+
+
+
     // ---------------- HITSTOP ----------------
     if (hitstopTimer > 0.f) {
         hitstopTimer -= dt;
@@ -80,14 +123,18 @@ void Game::update(float dt) {
     bool slamPressed =
         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) ||
         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down);
-    bool attackPressed =
+    bool attackDown =
         sf::Mouse::isButtonPressed(sf::Mouse::Button::Left);
 
-    // ---------------- NORMAL ATTACK ----------------
-    if (attackPressed && !player.attacking) {
+    // Detect fresh press (edge)
+    bool attackJustPressed = attackDown && !attackButtonHeld;
+    attackButtonHeld = attackDown;
+
+    if (attackJustPressed && !player.attacking) {
         player.attacking = true;
         player.attackTimer = ATTACK_TIME;
     }
+
 
     if (player.attacking) {
         player.attackTimer -= dt;
