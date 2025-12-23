@@ -6,6 +6,63 @@
 // - Prepare asset layout for Steam upload (no absolute paths)
 
 // =========================
+// TODO (Audio System)
+// =========================
+// - Add centralized Audio system (SFML Audio)
+// - Load sound effects from assets/audio/
+// - Support one-shot SFX (jump, dash, attack, slam, hit, death)
+// - Prevent sound spam (retrigger control / cooldowns)
+// - Add master volume control
+// - Add background music streaming (.ogg)
+// - Prepare for settings menu (mute / volume sliders)
+// - Ensure assets are loaded relative to the executable
+
+// =========================
+// TODO (Menus & End Screens)
+// =========================
+//
+// MAIN MENU
+// - Add main menu state (Title Screen)
+// - Options:
+//     * Start Game
+//     * Level Select (later)
+//     * Settings (audio / controls)
+//     * Quit
+// - Keyboard + mouse navigation
+// - Neon / Geometry Dash–style visuals
+//
+// PAUSE MENU
+// - Toggle pause menu (Esc)
+// - Resume
+// - Restart Level
+// - Return to Main Menu
+// - Pause gameplay updates while menu is active
+//
+// END / WIN SCREEN
+// - End-goal triggers win state
+// - Display "WIN" or victory message
+// - Show time / deaths (later)
+// - Input:
+//     * Continue to next level
+//     * Restart
+//     * Return to menu
+// - Neon glow + subtle animation
+//
+// GAME STATES
+// - Implement GameState enum:
+//     * Menu
+//     * Playing
+//     * Paused
+//     * Win
+//     * GameOver (optional)
+// - Centralize state transitions
+//
+// POLISH (LATER)
+// - Menu sound effects
+// - Screen fade in/out between states
+// - Controller support
+
+// =========================
 // TODO (Future Gameplay Systems)
 // =========================
 //
