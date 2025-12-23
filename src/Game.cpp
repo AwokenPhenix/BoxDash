@@ -6,6 +6,53 @@ static float clampf(float v, float lo, float hi) {
     return std::max(lo, std::min(v, hi));
 }
 
+static void drawNeonTri(sf::RenderTarget& target,
+    const sf::ConvexShape& base,
+    sf::Color neon)
+{
+    // thin outline glow
+    sf::ConvexShape glow = base;
+    glow.setFillColor(sf::Color::Transparent);
+    glow.setOutlineThickness(2.f);
+    glow.setOutlineColor(sf::Color(neon.r, neon.g, neon.b, 120));
+    target.draw(glow, sf::BlendAdd);
+
+    // tighter halo
+    glow.setOutlineThickness(4.f);
+    glow.setOutlineColor(sf::Color(neon.r, neon.g, neon.b, 40));
+    target.draw(glow, sf::BlendAdd);
+
+    // solid core
+    sf::ConvexShape core = base;
+    core.setFillColor(neon);
+    core.setOutlineThickness(0.f);
+    target.draw(core);
+}
+
+static void drawNeonRect(sf::RenderTarget& target,
+    const sf::RectangleShape& base,
+    sf::Color neon)
+{
+    // --- thin glow outline ---
+    sf::RectangleShape glow = base;
+    glow.setFillColor(sf::Color::Transparent);
+    glow.setOutlineThickness(2.f);
+    glow.setOutlineColor(sf::Color(neon.r, neon.g, neon.b, 120));
+    target.draw(glow, sf::BlendAdd);
+
+    // --- extra tight halo (1px) ---
+    glow.setOutlineThickness(4.f);
+    glow.setOutlineColor(sf::Color(neon.r, neon.g, neon.b, 40));
+    target.draw(glow, sf::BlendAdd);
+
+    // --- solid core ---
+    sf::RectangleShape core = base;
+    core.setFillColor(neon);
+    core.setOutlineThickness(0.f);
+    target.draw(core);
+}
+
+
 Game::Game()
     : window(sf::VideoMode(sf::Vector2u(960, 540)), "Platformer"),
     view({ 0,0 }, { VIEW_W, VIEW_H })
@@ -13,25 +60,55 @@ Game::Game()
     window.setFramerateLimit(60);
     window.setView(view);
 
+    // Player
     player.body.setSize({ PLAYER_SIZE, PLAYER_SIZE });
     player.body.setFillColor(sf::Color(0, 255, 180));
     player.respawn();
 
-    level.loadFromFile("level1.txt");
+    // Level
+    level.loadFromFile("src/Levels/level1.txt");
 
-
-    // enemies
+    // Normal enemies
     for (int i = 0; i < 4; ++i) {
         Enemy e;
+        e.type = EnemyType::Walker;   // 
+
         e.body.setSize({ 28.f, 28.f });
         e.body.setFillColor(sf::Color::Red);
         e.body.setPosition({ 600.f + i * 60.f, GROUND_Y - 28.f });
+
         enemies.push_back(e);
     }
 
+    // Attack box
     attackBox.setSize({ 24.f, 28.f });
     attackBox.setFillColor(sf::Color(255, 255, 255, 200));
+
+    // Spike factory
+    auto makeSpike = [&](float x, float y, float w, float h) {
+        Enemy e;
+        e.type = EnemyType::Spike;
+
+        e.body.setSize({ w, h });
+        e.body.setPosition({ x, y });
+        e.body.setFillColor(sf::Color::Transparent);
+
+        e.visual.setPointCount(3);
+        e.visual.setPoint(0, { 0.f, h });
+        e.visual.setPoint(1, { w / 2.f, 0.f });
+        e.visual.setPoint(2, { w, h });
+        e.visual.setFillColor(sf::Color::Red);
+        e.visual.setPosition({ x, y });
+
+        enemies.push_back(e);
+        };
+
+    // Instantiate spikes from level data
+    for (auto& s : level.spikes) {
+        makeSpike(s.x, s.y, s.w, s.h);
+    }
 }
+
 
 void Game::run() {
     sf::Clock clock;
@@ -96,7 +173,7 @@ void Game::update(float dt) {
 
         // Save
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) {
-            level.saveToFile("level1.txt");
+            level.loadFromFile("src/Levels/level1.txt");
         }
 
         return; // skip normal gameplay update
@@ -118,7 +195,10 @@ void Game::update(float dt) {
     if (move != 0.f)
         player.facing = (move > 0.f ? 1 : -1);
 
-    bool jumpPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space);
+    bool jumpDown = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space);
+    bool jumpJustPressed = jumpDown && !jumpButtonHeld;
+    jumpButtonHeld = jumpDown;
+
     bool dashPressed = sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift);
     bool slamPressed =
         sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S) ||
@@ -149,18 +229,25 @@ void Game::update(float dt) {
         player.vel.y = SLAM_SPEED;
     }
 
-    // ---------------- JUMP / WALL JUMP ----------------
-    if (jumpPressed && !player.slamming) {
-        if (player.grounded) {
-            player.vel.y = JUMP_VEL;
-            player.grounded = false;
-        }
-        else if (player.touchingWall) {
+    // ---------------- JUMP / DOUBLE JUMP / WALL JUMP ----------------
+    if (jumpJustPressed && !player.slamming) {
+        if (player.touchingWall && !player.grounded) {
+            // wall jump
             player.vel.y = JUMP_VEL;
             player.vel.x = -player.wallDir * WALL_JUMP_X;
             player.touchingWall = false;
+
+            // after a wall jump, you still get 1 air jump
+            player.jumpsRemaining = player.maxJumps - 1;
+        }
+        else if (player.jumpsRemaining > 0) {
+            // ground jump or double jump
+            player.vel.y = JUMP_VEL;
+            player.jumpsRemaining--;
+            player.grounded = false;
         }
     }
+
 
     // ---------------- DASH ----------------
     if (dashPressed && player.canDash && !player.dashing && !player.slamming) {
@@ -203,11 +290,13 @@ void Game::update(float dt) {
                 player.vel.y = 0.f;
                 player.grounded = true;
                 player.canDash = true;
+                player.jumpsRemaining = player.maxJumps; 
 
                 if (player.slamming) {
                     player.slamming = false;
                 }
             }
+
             else if (player.vel.y < 0.f) {
                 player.body.setPosition({
                     player.body.getPosition().x,
@@ -272,7 +361,18 @@ void Game::update(float dt) {
         player.vel.y > WALL_SLIDE_SPEED) {
         player.vel.y = WALL_SLIDE_SPEED;
     }
+    // ---------------- SPIKE COLLISION ----------------
+    sf::FloatRect playerBox = player.body.getGlobalBounds();
 
+    for (auto& e : enemies) {
+        if (!e.alive) continue;
+
+        if (e.type == EnemyType::Spike &&
+            playerBox.findIntersection(e.body.getGlobalBounds())) {
+            player.respawn();
+            break;
+        }
+    }
     // ---------------- NORMAL ATTACK HITBOX ----------------
     if (player.attacking) {
         attackBox.setPosition({
@@ -281,15 +381,21 @@ void Game::update(float dt) {
             });
 
         for (auto& e : enemies) {
-            if (e.alive &&
-                attackBox.getGlobalBounds().findIntersection(e.body.getGlobalBounds())) {
+            if (!e.alive) continue;
 
+            // Attacks do NOT affect spikes
+            if (e.type == EnemyType::Spike)
+                continue;
+
+            if (attackBox.getGlobalBounds().findIntersection(e.body.getGlobalBounds())) {
                 e.alive = false;
                 player.canDash = true;
                 hitstopTimer = HITSTOP_TIME;
+                break; // one hit per attack
             }
         }
     }
+
 
     // ---------------- FALL RESET ----------------
     if (player.body.getPosition().y > FALL_DEATH_Y) {
@@ -314,7 +420,12 @@ void Game::update(float dt) {
 // Render
 // ------------------------------------------------
 void Game::render() {
-    window.clear(sf::Color(15, 15, 40));
+    window.clear(sf::Color(8, 8, 16)); // deep navy-black
+
+    for (auto& p : level.platforms)
+        drawNeonRect(window, p, sf::Color(0, 220, 255));
+
+    drawNeonRect(window, player.body, sf::Color(0, 255, 180));
 
     // draw level
     for (auto& p : level.platforms) {
@@ -323,9 +434,14 @@ void Game::render() {
 
     // draw enemies
     for (auto& e : enemies) {
-        if (e.alive)
-            window.draw(e.body);
+        if (!e.alive) continue;
+
+        if (e.type == EnemyType::Spike)
+            drawNeonTri(window, e.visual, sf::Color(255, 80, 120));
+        else
+            drawNeonRect(window, e.body, sf::Color(255, 70, 70));
     }
+
 
     if (player.attacking) {
         window.draw(attackBox);

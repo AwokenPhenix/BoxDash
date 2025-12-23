@@ -10,6 +10,9 @@ struct Player {
     // wall
     bool touchingWall = false;
     int wallDir = 0;
+    //jump
+    int jumpsRemaining = 0;
+    int maxJumps = 2; // ground jump + one extra
 
     // dash
     bool canDash = true;

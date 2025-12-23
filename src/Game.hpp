@@ -24,6 +24,7 @@ private:
     bool attackButtonHeld = false;
     bool editorMode = false;
     const float GRID_SIZE = 32.f;
+    bool jumpButtonHeld = false;
 
     void processInput(float dt);
     void update(float dt);

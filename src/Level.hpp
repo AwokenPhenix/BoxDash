@@ -1,16 +1,24 @@
 #pragma once
-#include <SFML/Graphics.hpp>
-#include <vector>
 
-#pragma once
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <string>
 
+// --------- DATA TYPES ---------
+struct SpikeData {
+    float x;
+    float y;
+    float w;
+    float h;
+};
+
+// --------- LEVEL ---------
 struct Level {
     std::vector<sf::RectangleShape> platforms;
+    std::vector<SpikeData> spikes;
 
     void clear();
+
     void addPlatform(float x, float y, float w, float h);
 
     bool loadFromFile(const std::string& path);

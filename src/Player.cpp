@@ -5,6 +5,7 @@ void Player::respawn() {
     body.setPosition(SPAWN_POINT);
     vel = { 0.f, 0.f };
 
+
     grounded = false;
     touchingWall = false;
     wallDir = 0;
@@ -18,4 +19,6 @@ void Player::respawn() {
 
     slamming = false;   
     facing = 1;
+
+    jumpsRemaining = maxJumps;
 }
