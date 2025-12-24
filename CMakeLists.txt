@@ -47,3 +47,7 @@ if (MSVC)
 else()
     target_compile_options(PlatformerPrototype PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+
+file(COPY ${CMAKE_SOURCE_DIR}/data
+     DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})

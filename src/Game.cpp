@@ -2,6 +2,35 @@
 #include "Config.hpp"
 #include <cmath>
 
+
+void Game::loadLevel(int index) {
+    currentLevel = index;
+    enemies.clear();
+
+    level.loadFromFile(levelPaths[currentLevel]);
+
+    // Setup goal (assume one goal for now)
+    if (!level.goals.empty()) {
+        auto& g = level.goals[0];
+        goalShape.setSize({ g.size, g.size });
+        goalShape.setPosition({ g.x, g.y });
+        goalShape.setFillColor(sf::Color(255, 80, 180)); // pink
+    }
+
+    player.respawn();
+}
+
+void Game::loadNextLevel() {
+    int next = currentLevel + 1;
+    if (next < (int)levelPaths.size()) {
+        loadLevel(next);
+    }
+    else {
+        // TODO: win screen
+    }
+}
+
+
 static float clampf(float v, float lo, float hi) {
     return std::max(lo, std::min(v, hi));
 }
@@ -66,7 +95,14 @@ Game::Game()
     player.respawn();
 
     // Level
-    level.loadFromFile("src/Levels/level1.txt");
+    levelPaths = {
+        "data/levels/level1.txt",
+        "data/levels/level2.txt"
+    };
+
+    loadLevel(0); // <-- THIS IS THE KEY
+
+
 
     // Normal enemies
     for (int i = 0; i < 4; ++i) {
@@ -107,6 +143,9 @@ Game::Game()
     for (auto& s : level.spikes) {
         makeSpike(s.x, s.y, s.w, s.h);
     }
+  
+
+
 }
 
 
@@ -171,10 +210,12 @@ void Game::update(float dt) {
             }
         }
 
-        // Save
+
+// Save level
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::S)) {
-            level.loadFromFile("src/Levels/level1.txt");
+            level.saveToFile("data/levels/level1.txt");
         }
+
 
         return; // skip normal gameplay update
     }
@@ -410,6 +451,12 @@ void Game::update(float dt) {
     float t = 1.f - std::exp(-8.f * dt);
     view.setCenter(cc + (pc - cc) * t);
     window.setView(view);
+    // ---------------- GOAL CHECK ----------------
+    if (goalShape.getGlobalBounds()
+        .findIntersection(player.body.getGlobalBounds())) {
+        loadNextLevel(); // or loadLevel(currentLevel + 1)
+    }
+
 }
 
 
@@ -420,33 +467,44 @@ void Game::update(float dt) {
 // Render
 // ------------------------------------------------
 void Game::render() {
-    window.clear(sf::Color(8, 8, 16)); // deep navy-black
+    // ---------------- CLEAR ----------------
+    window.clear(sf::Color(8, 8, 16)); // dark neon background
+    sf::RectangleShape debugGoal;
+    debugGoal.setPosition({
+       player.body.getPosition().x + 40.f,
+       player.body.getPosition().y
+        });
 
-    for (auto& p : level.platforms)
-        drawNeonRect(window, p, sf::Color(0, 220, 255));
 
-    drawNeonRect(window, player.body, sf::Color(0, 255, 180));
-
-    // draw level
+    // ---------------- PLATFORMS ----------------
     for (auto& p : level.platforms) {
-        window.draw(p);
+        drawNeonRect(window, p, sf::Color(0, 220, 255));
     }
 
-    // draw enemies
+    // ---------------- GOAL ----------------
+    // Draw AFTER platforms so it is visible
+    drawNeonRect(window, goalShape, sf::Color(255, 80, 180));
+
+    // ---------------- ENEMIES ----------------
     for (auto& e : enemies) {
         if (!e.alive) continue;
 
-        if (e.type == EnemyType::Spike)
+        if (e.type == EnemyType::Spike) {
             drawNeonTri(window, e.visual, sf::Color(255, 80, 120));
-        else
+        }
+        else {
             drawNeonRect(window, e.body, sf::Color(255, 70, 70));
+        }
     }
 
-
+    // ---------------- ATTACK ----------------
     if (player.attacking) {
         window.draw(attackBox);
-    }    // draw player
-    window.draw(player.body);
+    }
 
+    // ---------------- PLAYER ----------------
+    drawNeonRect(window, player.body, sf::Color(0, 255, 180));
+
+    // ---------------- PRESENT ----------------
     window.display();
 }

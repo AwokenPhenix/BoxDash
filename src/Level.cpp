@@ -2,11 +2,12 @@
 
 #include <fstream>
 #include <sstream>
-
+#include <iostream>
 // ---------------- CLEAR ----------------
 void Level::clear() {
     platforms.clear();
     spikes.clear();
+    goals.clear();
 }
 
 // ---------------- ADD PLATFORM ----------------
@@ -45,6 +46,16 @@ bool Level::loadFromFile(const std::string& path) {
             ss >> s.x >> s.y >> s.w >> s.h;
             spikes.push_back(s);
         }
+        else if (type == "GOAL") {
+            GoalData g;
+            ss >> g.x >> g.y >> g.size;
+            goals.push_back(g);
+            std::cout << "Loaded GOAL at " << g.x << ", " << g.y << "\n";
+
+
+        }
+       
+
     }
 
     return true;

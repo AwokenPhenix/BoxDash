@@ -6,6 +6,7 @@
 #include "Enemy.hpp"
 #include "Level.hpp"
 
+
 class Game {
 public:
     Game();
@@ -17,9 +18,15 @@ private:
 
     Player player;
     Level level;
-    std::vector<Enemy> enemies;
 
+    std::vector<Enemy> enemies;
+    sf::RectangleShape goalShape;
     sf::RectangleShape attackBox;
+
+    int currentLevel = 0;
+    std::vector<std::string> levelPaths;
+
+
     float hitstopTimer = 0.f;
     bool attackButtonHeld = false;
     bool editorMode = false;
@@ -29,4 +36,7 @@ private:
     void processInput(float dt);
     void update(float dt);
     void render();
+    void loadLevel(int index);
+    void loadNextLevel();
+
 };
